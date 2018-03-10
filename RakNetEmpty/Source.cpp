@@ -12,9 +12,9 @@
 #include <vector>
 
 #define SERVER_PORT 65000
-#define SERVER_MAX_CONNECTIONS 8
+#define SERVER_MAX_CONNECTIONS 4
 
-#define CLIENT_PORT_START SERVER_PORT + 1
+#define CLIENT_PORT_START 65001
 #define CLIENT_PORT_END CLIENT_PORT_START + SERVER_MAX_CONNECTIONS
 
 bool isRunning = false;
@@ -24,7 +24,7 @@ std::thread inputThread;
 std::thread networkThread;
 
 RakNet::RakPeerInterface *rakPeerInterface = nullptr;
-//RakNet::SystemAddress clientID;
+RakNet::SystemAddress clientID;
 
 std::string clientName;
 char message[2048];
