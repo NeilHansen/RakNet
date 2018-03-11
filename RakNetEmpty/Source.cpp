@@ -389,25 +389,54 @@ RakNet::SystemAddress g_serverAddress;
 
 std::mutex g_networkState_mutex;
 NetworkState g_networkState = NS_Init;
+using namespace RakNet;
+void SelectCharacter(RakNetGUID guid, int character);
+
 
 enum {
 	ID_THEGAME_LOBBY_READY = ID_USER_PACKET_ENUM,
 	ID_PLAYER_READY,
-	ID_THEGAME_START,
+	ID_THEGAME_CHARACTERSELECT,
+	ID_THEGAME_PLAYING,
+	ID_THEGAME_WINNER,
+	ID_THEGAME_GAMEOVER
 };
 
 enum EPlayerClass
 {
 	Mage = 0,
 	Rogue,
-	Cleric,
+	Warrior,
+	Count,
 };
 
 struct SPlayer
 {
+	//getters setters
+	SPlayer() : m_class(Count), m_health(0) {}
+	bool IsAlive() const { return m_health > 0; }
+	//get class from enum
+	char* GetPlayerType()
+	{
+		switch (m_class)
+		{
+		case Mage:
+			return "Mage";
+		case Warrior:
+			return "Warrior";
+		case Rogue:
+			return "Rogue";
+		default:
+			return "None";
+		}
+	}
 	std::string m_name;
 	unsigned int m_health;
+	unsigned int m_atk;
 	EPlayerClass m_class;
+	// is active player bool
+	bool isPlaying = false;
+	
 
 	//function to send a packet with name/health/class etc
 	void SendName(RakNet::SystemAddress systemAddress, bool isBroadcast)
@@ -421,6 +450,8 @@ struct SPlayer
 		assert(g_rakPeerInterface->Send(&writeBs, HIGH_PRIORITY, RELIABLE_ORDERED, 0, systemAddress, isBroadcast));
 	}
 };
+SPlayer character_t;
+SPlayer *  pcharacter_t;
 
 std::map<unsigned long, SPlayer> m_players;
 
@@ -486,6 +517,12 @@ void OnLobbyReady(RakNet::Packet* packet)
 	player.m_name = userName;
 	std::cout << userName.C_String() << " aka " << player.m_name.c_str() << " IS READY!!!!!" << std::endl;
 
+	if (m_players.size() == 3)
+	{
+		RakNet::BitStream bs;
+		bs.Write((RakNet::MessageID)ID_THEGAME_CHARACTERSELECT);
+	}
+
 	//notify all other connected players that this plyer has joined the game
 	for (std::map<unsigned long, SPlayer>::iterator it = m_players.begin(); it != m_players.end(); ++it)
 	{
@@ -497,21 +534,21 @@ void OnLobbyReady(RakNet::Packet* packet)
 
 		SPlayer& player = it->second;
 		player.SendName(packet->systemAddress, false);
-		/*RakNet::BitStream writeBs;
-		writeBs.Write((RakNet::MessageID)ID_PLAYER_READY);
-		RakNet::RakString name(player.m_name.c_str());
-		writeBs.Write(name);
+		//RakNet::BitStream writeBs;
+		//writeBs.Write((RakNet::MessageID)ID_PLAYER_READY);
+		//RakNet::RakString name(player.m_name.c_str());
+		//writeBs.Write(name);
 
 		//returns 0 when something is wrong
-		assert(g_rakPeerInterface->Send(&writeBs, HIGH_PRIORITY, RELIABLE_ORDERED, 0, packet->systemAddress, false));*/
+		//assert(g_rakPeerInterface->Send(&writeBs, HIGH_PRIORITY, RELIABLE_ORDERED, 0, packet->systemAddress, false));
 	}
 
 	player.SendName(packet->systemAddress, true);
-	/*RakNet::BitStream writeBs;
-	writeBs.Write((RakNet::MessageID)ID_PLAYER_READY);
-	RakNet::RakString name(player.m_name.c_str());
-	writeBs.Write(name);
-	assert(g_rakPeerInterface->Send(&writeBs, HIGH_PRIORITY, RELIABLE_ORDERED, 0, packet->systemAddress, true));*/
+	//RakNet::BitStream writeBs;
+	//writeBs.Write((RakNet::MessageID)ID_PLAYER_READY);
+	//RakNet::RakString name(player.m_name.c_str());
+	//writeBs.Write(name);
+	//assert(g_rakPeerInterface->Send(&writeBs, HIGH_PRIORITY, RELIABLE_ORDERED, 0, packet->systemAddress, true));
 
 }
 
@@ -527,6 +564,18 @@ unsigned char GetPacketIdentifier(RakNet::Packet *packet)
 	}
 	else
 		return (unsigned char)packet->data[0];
+}
+
+//display players info
+void DisplayPlayerInfo()
+{
+	for (int i=0; i < m_players.count; i++)
+	{
+		std::cout << "GUID : " << m_players._Getpfirst.ToString() << std::endl;
+		std::cout << "Player Type" << m_players._Get_data->m_playerType << std::endl;
+		std::cout << "Atk : " << m_players._Getpfirst->m_atk << std::endl;
+		std::cout << "Health : " << m_players._Getpfirst->m_health << std::endl;
+	}
 }
 
 
@@ -570,12 +619,6 @@ void InputHandler()
 				std::cout << "pending..." << std::endl;
 
 			doOnce = true;
-
-			if (m_players.size() == 1)
-			{
-				RakNet::BitStream bs;
-				bs.Write((RakNet::MessageID)ID_THEGAME_START);
-			}
 
 		}
 		std::this_thread::sleep_for(std::chrono::microseconds(1));
@@ -665,6 +708,64 @@ void StartGame(RakNet::Packet* packet)
 
 
 	std::cout << "Game Started" << std::endl;
+	std::cout << "Choose your Class!" << std::endl;
+	std::cout << "[M]age, [W]arrior, [R]ogue\n" << std::endl;
+
+	char ch[255];
+	std::cin >> ch;
+
+		if (*ch == 'w' || *ch == 'W')
+		{
+			*ch = 0;
+				printf("You have chosen Warrior!\n");
+			SelectCharacter(g_rakPeerInterface->GetMyGUID(), 2);
+	
+		if (*ch == 'm' || *ch == 'M')
+		{
+			*ch = 0;
+				printf("You have chosen Mage!\n");
+			SelectCharacter(g_rakPeerInterface->GetMyGUID(), 0);
+
+		}
+		if (*ch == 'r' || *ch == 'R')
+		{
+			*ch = 0;
+			printf("You have chosen Rogue!\n");
+			SelectCharacter(g_rakPeerInterface->GetMyGUID(), 1);
+
+		}
+		
+		void DisplayPlayerInfo();
+
+}
+
+		}
+
+//character select for each client
+void SelectCharacter(RakNetGUID guid, int character)
+{
+	//get player
+	std::map<unsigned long, SPlayer>::iterator it = m_players.find(guid);
+	//select character
+	if (character_t.isPlaying)
+	{
+		g_rakPeerInterface->Send(chosenCharacter, (int)strlen(chosenCharacter) + 1, HIGH_PRIORITY, RELIABLE_ORDERED, 0, RakNet::UNASSIGNED_SYSTEM_ADDRESS, false);
+	}
+	else {
+		it->second.GetPlayerType = character;
+		g_rakPeerInterface->Send(chosenCharacter, (int)strlen(chosenCharacter) + 1, HIGH_PRIORITY, RELIABLE_ORDERED, 0, RakNet::UNASSIGNED_SYSTEM_ADDRESS, true);
+	}
+}
+// chooses first player
+void SelectFirst(RakNetGUID guid)
+{
+	std::map<unsigned long, SPlayer>::iterator it = m_players.find(guid);
+	if (it->second.isPlaying)
+	{
+		int firstPlayer = rand(0, m_players.count);
+		std::map<unsigned long, SPlayer>::iterator first = m_players(firstPlayer);
+		it->first;
+	}
 }
 
 void PacketHandler()
@@ -685,7 +786,7 @@ void PacketHandler()
 				case ID_PLAYER_READY:
 					DisplayPlayerReady(packet);
 					break;
-				case ID_THEGAME_START:
+				case ID_THEGAME_CHARACTERSELECT:
 					StartGame(packet);
 					break;
 				default:
@@ -758,3 +859,4 @@ int main()
 	packetHandler.join();
 	return 0;
 }
+
