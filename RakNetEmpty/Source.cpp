@@ -11,15 +11,21 @@
 #include <thread>
 #include <vector>
 
+
+//server port 
 #define SERVER_PORT 65000
+
+//max connections allowed to server
 #define SERVER_MAX_CONNECTIONS 4
 
+//client port
 #define CLIENT_PORT_START 65001
 #define CLIENT_PORT_END CLIENT_PORT_START + SERVER_MAX_CONNECTIONS
 
 bool isRunning = false;
 bool isServer = false;
 
+//threads
 std::thread inputThread;
 std::thread networkThread;
 
@@ -29,36 +35,13 @@ RakNet::SystemAddress clientID;
 std::string clientName;
 char message[2048];
 
+//form lab for assignment
 enum EPlayerClass
 {
 	Mage = 0,
 	Rogue,
 	Barbarian
 };
-
-// Starts the client
-void StartClient()
-{
-	if (rakPeerInterface != nullptr) return;
-	isServer = false;
-
-	rakPeerInterface = RakNet::RakPeerInterface::GetInstance();
-
-	RakNet::SocketDescriptor socketDescriptor(0, 0);
-
-	socketDescriptor.socketFamily = AF_INET;
-
-	rakPeerInterface->Startup(SERVER_MAX_CONNECTIONS, &socketDescriptor, 1);
-	rakPeerInterface->SetOccasionalPing(true);
-
-	RakNet::ConnectionAttemptResult connectionAttemptResult = rakPeerInterface->Connect(rakPeerInterface->GetLocalIP(0), SERVER_PORT, "", 0);
-
-	if (connectionAttemptResult == RakNet::CONNECTION_ATTEMPT_STARTED)
-	{
-		isRunning = true;
-	}
-
-}
 
 // Starts the server
 void StartServer()
@@ -84,6 +67,30 @@ void StartServer()
 
 		isRunning = true;
 	}
+}
+
+// Starts the client
+void StartClient()
+{
+	if (rakPeerInterface != nullptr) return;
+	isServer = false;
+
+	rakPeerInterface = RakNet::RakPeerInterface::GetInstance();
+
+	RakNet::SocketDescriptor socketDescriptor(0, 0);
+
+	socketDescriptor.socketFamily = AF_INET;
+
+	rakPeerInterface->Startup(SERVER_MAX_CONNECTIONS, &socketDescriptor, 1);
+	rakPeerInterface->SetOccasionalPing(true);
+
+	RakNet::ConnectionAttemptResult connectionAttemptResult = rakPeerInterface->Connect(rakPeerInterface->GetLocalIP(0), SERVER_PORT, "", 0);
+
+	if (connectionAttemptResult == RakNet::CONNECTION_ATTEMPT_STARTED)
+	{
+		isRunning = true;
+	}
+
 }
 
 // Gets the packet identifier
@@ -245,6 +252,7 @@ void HandleServerInput(const std::string &line)
 	}
 	else
 	{
+		//server can talk here
 		std::string message = "Server: " + line;
 		const char *data = message.c_str();
 		rakPeerInterface->Send(data, (const int)strlen(data) + 1, HIGH_PRIORITY, RELIABLE_ORDERED, 0, RakNet::UNASSIGNED_SYSTEM_ADDRESS, true);
@@ -261,6 +269,7 @@ void HandleClientInput(const std::string &line)
 		return;
 	}
 
+	//client talks here
 	std::string message = clientName + ": " + line;
 	const char *data = message.c_str();
 	rakPeerInterface->Send(data, (const int)strlen(data) + 1, HIGH_PRIORITY, RELIABLE_ORDERED, 0, RakNet::UNASSIGNED_SYSTEM_ADDRESS, true);
@@ -268,7 +277,7 @@ void HandleClientInput(const std::string &line)
 }
 
 // Handles input
-void HandleInput()
+void InputHandler()
 {
 	printf("Would you like to be a client (c) or server (s)?\n");
 	char c = getchar();
@@ -276,7 +285,7 @@ void HandleInput()
 	{
 		printf("Please enter your username.\n");
 		std::cin >> clientName;
-
+		
 		StartClient();
 	}
 	else
@@ -286,14 +295,14 @@ void HandleInput()
 
 	while (isRunning && rakPeerInterface != nullptr)
 	{
-		std::this_thread::sleep_for(std::chrono::milliseconds(30));
+		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 
 		std::string line;
 
 		std::getline(std::cin, line);
 		if (!line.empty())
 		{
-
+			
 			if (isServer)
 			{
 				HandleServerInput(line);
@@ -337,15 +346,10 @@ void HandleNetwork()
 	RakNet::RakPeerInterface::DestroyInstance(rakPeerInterface);
 }
 
-void PrintStats()
-{
-
-}
-
 // Main
 int main(int argc, char **argv)
 {
-	inputThread = std::thread(HandleInput);
+	inputThread = std::thread(InputHandler);
 	networkThread = std::thread(HandleNetwork);
 
 	inputThread.join();
