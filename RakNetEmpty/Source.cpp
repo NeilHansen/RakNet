@@ -745,9 +745,9 @@ void StartGame(RakNet::Packet* packet)
 void SelectCharacter(RakNetGUID guid, int character)
 {
 	//get player
-	std::map<unsigned long, SPlayer>::iterator it = m_players.find(guid);
+	//std::map<unsigned long, SPlayer>::iterator it = m_players.find(guid);
 	//select character
-	if (character_t.isPlaying)
+	/*if (character_t.isPlaying)
 	{
 		g_rakPeerInterface->Send(chosenCharacter, (int)strlen(chosenCharacter) + 1, HIGH_PRIORITY, RELIABLE_ORDERED, 0, RakNet::UNASSIGNED_SYSTEM_ADDRESS, false);
 	}
@@ -755,17 +755,44 @@ void SelectCharacter(RakNetGUID guid, int character)
 		it->second.GetPlayerType = character;
 		g_rakPeerInterface->Send(chosenCharacter, (int)strlen(chosenCharacter) + 1, HIGH_PRIORITY, RELIABLE_ORDERED, 0, RakNet::UNASSIGNED_SYSTEM_ADDRESS, true);
 	}
+	*/
 }
-// chooses first player
+// chooses first player // commented out cause could get it to work
 void SelectFirst(RakNetGUID guid)
 {
-	std::map<unsigned long, SPlayer>::iterator it = m_players.find(guid);
-	if (it->second.isPlaying)
+	//std::map<unsigned long, SPlayer>::iterator it = m_players.find(guid);
+	/*if (it->second.isPlaying)
 	{
 		int firstPlayer = rand(0, m_players.count);
 		std::map<unsigned long, SPlayer>::iterator first = m_players(firstPlayer);
 		it->first;
 	}
+	*/
+}
+
+void HandleTurns(RakNet::Packet* packet)
+{
+	RakNet::BitStream bs(packet->data, packet->length, false);
+	RakNet::MessageID messageId;
+	bs.Read(messageId);
+//turn stuff in here
+}
+
+
+void ShowWinner(RakNet::Packet* packet)
+{
+	RakNet::BitStream bs(packet->data, packet->length, false);
+	RakNet::MessageID messageId;
+	bs.Read(messageId);
+	// display player with health left 
+}
+
+void GameOver(RakNet::Packet* packet)
+{
+	RakNet::BitStream bs(packet->data, packet->length, false);
+	RakNet::MessageID messageId;
+	bs.Read(messageId);
+	//thank you , wanna play again? quit?
 }
 
 void PacketHandler()
@@ -787,7 +814,17 @@ void PacketHandler()
 					DisplayPlayerReady(packet);
 					break;
 				case ID_THEGAME_CHARACTERSELECT:
+				//	SelectCharacter(guid);
 					StartGame(packet);
+					break;
+				case ID_THEGAME_PLAYING:
+					HandleTurns(packet);
+					break;
+				case ID_THEGAME_WINNER:
+					ShowWinner(packet);
+					break;
+				case ID_THEGAME_GAMEOVER:
+					GameOver(packet);
 					break;
 				default:
 					break;
