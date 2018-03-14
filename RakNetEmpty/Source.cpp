@@ -772,7 +772,9 @@ void StartGame(RakNet::Packet* packet)
 		nbs.Write(name);
 		RakNet::RakNetGUID guid(g_rakPeerInterface->GetMyGUID());
 		nbs.Write(guid);
-
+		unsigned int atk = 2;
+		unsigned int def = 2;
+		unsigned int hp = 10;
 
 		assert(g_rakPeerInterface->Send(&nbs, HIGH_PRIORITY, RELIABLE_ORDERED, 0, g_serverAddress , false));
 		g_networkState_mutex.lock();
@@ -867,22 +869,38 @@ void IntroCharacterChoice(RakNet::Packet* packet)
 	unsigned long guid = RakNet::RakNetGUID::ToUint32(packet->guid);
 	SPlayer& player = GetPlayer(packet->guid);
 	player.m_class = _class;
-	//player.m_atk = 2;
-
+	unsigned int atk;
+	bs.Read(atk);
+	unsigned int def;
+	bs.Read(def);
+	unsigned int hp;
+	bs.Read(hp);
+	player.m_atk = atk;
+	player.m_def = def;
+	player.m_health = hp;
+	
 	std::cout << player.m_name.c_str()<< " is a  " << player.m_class.c_str()<< std::endl;
-	//std::cout <<  "Atk  " << player.m_atk << std::endl;
+	std::cout << "Atk : " << player.m_atk << std::endl;
+	std::cout << "Def :  " << player.m_def << std::endl;
+	std::cout << "Hp :  " << player.m_health << std::endl;
 
 	
 	
 	
 	
 	//to client
-	/*RakNet::BitStream nbs(packet->data, packet->length, false);
+	RakNet::BitStream nbs;
+
 	nbs.Write((RakNet::MessageID)ID_THEGAME_CHARACTERCHOSEN);
 	RakNet::RakString playername = player.m_name.c_str();
-	nbs.Write(playername);*/
+	nbs.Write(playername);
+	RakNet::RakString c_class = player.m_class.c_str();
+	nbs.Write(c_class);
+	//RakNet::RakString atk
+
 	
-	//assert(g_rakPeerInterface->Send(&nbs, HIGH_PRIORITY, RELIABLE_ORDERED, 0, UNASSIGNED_SYSTEM_ADDRESS, true));
+	
+	assert(g_rakPeerInterface->Send(&nbs, HIGH_PRIORITY, RELIABLE_ORDERED, 0, g_serverAddress, true));
 	//send to clients that player is a class 
 }
 
@@ -911,14 +929,19 @@ void GameOver(RakNet::Packet* packet)
 	//thank you , wanna play again? quit?
 }
 
+//client
 void DisplayCharacterChoice(RakNet::Packet* packet)
 {
 	RakNet::BitStream bs(packet->data, packet->length, false);
 	RakNet::MessageID messageId;
 	bs.Read(messageId);
+	RakNet::RakString playername;
+	bs.Read(playername);
+	RakNet::RakString c_class;
+	bs.Read(c_class);
 	
-
-	std::cout <<"here"<< std::endl;
+	std::cout << playername.C_String() << " is a  " << c_class.C_String() << std::endl;
+	//std::cout <<"here"<< std::endl;
 	//thank you , wanna play again? quit?
 }
 
